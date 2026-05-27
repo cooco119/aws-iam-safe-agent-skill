@@ -20,7 +20,8 @@ permissive user turns each of those failure modes into an unbounded incident.
 This skill replaces that pattern with **STS AssumeRole + MFA**:
 
 1. The agent's IAM User has **only** `sts:AssumeRole` on an explicit list of role ARNs.
-2. Each role is **purpose-scoped** (one task = one role), **15-minute max session**,
+2. Each role is **purpose-scoped** (one task = one role), leased for **15 minutes**
+   via the AssumeRole `DurationSeconds` (the role ceiling is AWS's 3600s minimum),
    and **MFA-gated** in its trust policy.
 3. When the agent wants to act, it asks for approval, a human taps MFA, and the
    agent gets 15-minute credentials for one role.

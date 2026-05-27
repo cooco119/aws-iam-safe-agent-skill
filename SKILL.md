@@ -17,7 +17,10 @@ Instead:
 
 1. The agent's IAM User holds **only** `sts:AssumeRole` against a known set of role ARNs.
 2. Every actual permission lives on a **purpose-scoped Role** (one role = one task type).
-3. Each Role has `max_session_duration = 900` (15 minutes).
+3. Every `AssumeRole` is requested with `DurationSeconds = 900` (a 15-minute lease).
+   The Role's `max_session_duration` is set to `3600` — AWS's *minimum* allowed
+   ceiling; a Role cannot be set below 1 hour, so the 15-minute cap comes from the
+   call duration, not the Role attribute.
 4. Each Role's Trust Policy requires `aws:MultiFactorAuthPresent = true`, forcing a
    human to participate in every assume.
 5. When an agent wants to do something, it calls `sts:AssumeRole` with a justification,
@@ -81,7 +84,7 @@ turns them into a bounded one.
                                   │
                                   ▼
         ┌─────────────────────────────────────────────────┐
-        │  Purpose-scoped Roles (max_session_duration=900) │
+        │  Purpose-scoped Roles (900s AssumeRole lease)   │
         │                                                 │
         │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌─────┐ │
         │  │ec2-read  │ │s3-deploy │ │rds-query │ │ ... │ │
@@ -122,7 +125,11 @@ Agent has no standing power. Every action is a fresh, narrow, audited 15-minute 
     separate trust policies. Production assume should be louder than dev assume.
   - **Per data domain** — the role that touches `bucket-customer-pii` is not the same
     role that touches `bucket-public-assets`.
-- `max_session_duration = 900`. Not 3600. Not 43200. Fifteen minutes.
+- `max_session_duration = 3600`. This is AWS's **minimum** allowed value — a Role's
+  `MaxSessionDuration` cannot be set below 3600 (1 hour), so the Role attribute alone
+  can never give you 15 minutes. The 15-minute lease is enforced by passing
+  `DurationSeconds = 900` on every `AssumeRole` call (see `references/assume_snippet.py`).
+  Keep the Role ceiling at 3600 and the call duration at 900; never raise either.
 - Trust Policy must include:
   ```
   "Condition": { "Bool": { "aws:MultiFactorAuthPresent": "true" } }
@@ -194,7 +201,9 @@ Before pointing a real agent at a real AWS account, every box must be checked.
       policy's only action is `sts:AssumeRole`.
 - [ ] That policy's `Resource` is an **explicit list of role ARNs**. No `*`. No
       `arn:aws:iam::*:role/*`. No `arn:aws:iam::123456789012:role/*`.
-- [ ] Every assumable Role has `max_session_duration = 900`.
+- [ ] Every assumable Role has `max_session_duration = 3600` (AWS's minimum — it
+      **cannot** be set to 900) **and** every `AssumeRole` call passes
+      `DurationSeconds = 900`. The 15-minute lease comes from the call, not the Role.
 - [ ] Every assumable Role's Trust Policy contains
       `"Bool": { "aws:MultiFactorAuthPresent": "true" }`.
 - [ ] No Role uses `AdministratorAccess`, `PowerUserAccess`, or any `*FullAccess`
