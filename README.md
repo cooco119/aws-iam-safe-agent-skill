@@ -1,4 +1,4 @@
-# aws-iam-safe-agent
+# aws-iam-safe-agent-skill
 
 A reusable skill + Terraform template for giving AI agents AWS access **without**
 handing them the keys to your account.
@@ -44,7 +44,7 @@ This skill replaces that pattern with **STS AssumeRole + MFA**:
 ## Repo layout
 
 ```
-aws-iam-safe-agent/
+aws-iam-safe-agent-skill/
 ├── SKILL.md                    ← The skill. Read this first.
 ├── README.md                   ← You are here.
 ├── LICENSE                     ← MIT.
