@@ -6,7 +6,10 @@
 #     against an explicit list of role ARNs.
 #   - 4 purpose-scoped IAM Roles (ec2-read, s3-deploy, rds-query, cloudwatch-read)
 #     each with:
-#       * max_session_duration = 900   (15 minutes)
+#       * max_session_duration = 3600  (AWS minimum; the role-side ceiling)
+#         The real 15-minute lease is enforced by DurationSeconds=900 on the
+#         AssumeRole call (see references/assume_snippet.py). AWS forbids a role
+#         MaxSessionDuration below 3600s, so 900 cannot be set here.
 #       * Trust Policy requiring aws:MultiFactorAuthPresent = true
 #       * Hand-rolled minimum permission policy
 #
@@ -192,7 +195,7 @@ resource "aws_iam_role" "task" {
 
   name                 = "${local.name_prefix}-${each.key}"
   description          = each.value.description
-  max_session_duration = 900 # 15 minutes. Do not raise.
+  max_session_duration = 3600 # AWS minimum ceiling (1h). The 15-min lease is enforced by DurationSeconds=900 on AssumeRole, not here. Do not raise.
   assume_role_policy   = data.aws_iam_policy_document.trust[each.key].json
 
   tags = merge(local.common_tags, {
